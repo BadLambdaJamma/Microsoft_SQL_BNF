@@ -1,0 +1,1841 @@
+!//////////////////////////////////////////////////////////////////////////////////////////
+!/
+!/ BNF for TSQL version
+!/ Jonathan A. Newell
+!/!
+!/ BNF Targeted to Gold Parser - should work with most any parsing system as standard BNF
+!/
+!/ Using this grammar and the GOLD Builder to create a compiled binary grammar file
+!/ you can parse TSQL code in .NET programs
+!/ 
+!/ Last update:  
+!/    Full support for CTE and "With" statement
+!/    Full support for the select item Over clause including row and range options.
+!/    Fixed bug in IS predicate 
+!/
+!////////////////////////////////////////////////////////////////////////////////////////////////
+
+"Name"         = 'TSQL'
+"Version"      = '2014'
+"About"        = 'This BNF notation  is specific to the TSQL Dialect'
+               | 'TSQL'
+
+"Start Symbol" = <TSQL Parseable Sets>
+
+
+!============================
+! Terminals
+! ===========================
+
+DollarSign = {#36}
+AtSign = {#64}
+SemiColon = {#59}
+PoundSign = {#35}
+
+{NCharIntroducer}  = {#78} + {#110}     
+{HexDigit}         =  [A] + [a] + [B] + [b] + [C] + [c] + [D] + [d] + [E] + [e] + [F] + [F] + [1] + [2] + [3] + [4] + [5] + [6] + [7] + [8] + [9] + [0]
+{Text}             = {Printable}
+{String Ch 1}      = {Text} - ["]
+{String Ch 2}      = {Text} - ['']
+{Id Ch Standard}   = {Alphanumeric} + [_]
+{Id Ch Extended}   = {Text} - ['['] - [']']
+
+StringLiteral   = '"'{String Ch 1}*'"' | ''{String Ch 2}*''
+IntegerLiteral  = {Digit}+
+RealLiteral     = {Digit}+'.'{Digit}+
+RealDecimal  = '.'{Digit}+
+nCharLiteral   = {NCharIntroducer}'"'{String Ch 1}*'"' | {NCharIntroducer}''{String Ch 2}*''
+HexLiteral = '0X'{HexDigit}* | '0x' {HexDigit}*
+   
+Comment Line  =  '--'
+Comment Start =  '/*'
+Comment End   =  '*/'
+
+!- Identifiers 
+Id  = {Letter}{Id Ch Standard}* | '['{Id Ch Extended}+']'
+
+!---------------------
+!- Language Elements
+!---------------------
+
+!--
+!-- Terminals shared by more than
+!-- one language element
+!--
+Right = RIGHT
+Left = LEFT
+Identity = IDENTITY
+
+!-- Terminals primarily used in a select statements
+Outer = OUTER
+Inner = INNER
+
+!-- Lock Types for TSQL Queries
+PagLock = PAGLOCK
+NoLock = NOLOCK
+RowLock = ROWLOCK
+TabLock = TABLOCK
+TabLockX=  TABLOCKX
+HoldLock = HOLDLOCK
+ReadCommitted  = READCOMMITTED
+ReapeatableRead = REPEATABLEREAD
+Serializable =  SERIALIZABLE
+
+!- Misc Keywords
+End = END
+
+!- Terminals used to define TSQL Data Types
+! - Char and nChar are chared keywords
+BigInt = BIGINT
+Binary = BINARY
+Bit = BIT
+DateTime = DATETIME
+Decimal = DECIMAL
+Float = FLOAT
+Image = IMAGE
+Int = INT
+Money = MONEY
+NText = NTEXT
+Numeric = NUMERIC
+NVarChar = NVARCHAR
+Real = REAL
+SmallDateTime = SMALLDATETIME
+SmallInt = SMALLINT
+SmallMoney = SMALLMONEY
+SQL_Variant = SQL_VARIANT
+Text = TEXT
+TimeStamp = TIMESTAMP
+TinyInt = TINYINT
+UniqueIdentifier = UNIQUEIDENTIFIER
+Varbinary = VARBINARY
+VarChar = VARCHAR
+XML = XML
+
+!------------------
+!- TSQL functions
+!------------------
+!- TSQL Cursor functions
+CursorStatus = CURSOR_STATUS
+
+!-TSQL Date Functions
+DateAdd = DATEADD
+DateDiff = DATEDIFF
+DateName = DATENAME
+DatePart = DATEPART
+Year = YEAR
+Day = DAY
+GetDate = GETDATE
+GetUTCDate = GETUTCDATE
+SysDateTime = SYSDATETIME
+Month = MONTH
+
+!- TSQL Math functions
+Abs = ABS
+ACos = ACOS
+ASin = ASIN
+ATan = ATAN
+Atn2 = ATN2
+Ceiling = CEILING
+Cos = COS
+Cot = COT
+Rand = RAND
+Sign = SIGN
+Tan = TAN
+SQRT = SQRT
+Degrees = DEGREES
+Exp = EXP
+Floor = FLOOR
+Log = LOG
+Log10 = LOG10
+Pi = PI
+Power = POWER
+Radians = RADIANS
+Round = ROUND
+Sin = SIN
+Square = SQUARE
+
+!- TSQL Meta Data functions
+ColLength = COL_LENGTH
+ColName = COL_NAME
+ColumnProperty = COLUMNPROPERTY
+DatabaseProperty = DATABASEPROPERTY
+DatabasePropertyEx = DATABASEPROPERTYEX
+DBId = DB_ID
+DBName = DB_NAME
+FileId = FILE_ID
+FileIdEx = FILE_IDEX
+FileName = FILE_NAME
+FileGroupId = FILEGROUP_ID
+FileGroupName = FILEGROUP_NAME
+FileGroupProperty = FILEGROUPPROPERTY
+FileProperty = FILEPROPERTY
+FNListExtendedProperty = fn_listextendedproperty
+FullTextCatalogProperty= FULLTEXTCATALOGPROPERTY
+FullTextServiceProperty = FULLTEXTSERVICEPROPERTY
+IndexCol = INDEX_COL
+IndexKeyProperty = INDEXKEY_PROPERTY
+IndexProperty = INDEXPROPERTY
+ObjectId = OBJECT_ID
+ObjectName = OBJECT_NAME
+ObjectProperty = OBJECTPROPERTY
+ObjectPropertyEx = OBJECTPROPERTYEX
+SqlVariantProperty = SQL_VARIANT_PROPERTY
+TypeId = TYPE_ID
+TypeName = TYPE_NAME
+TypeProperty = TYPEPROPERTY
+
+!-- TSQL Security Functions
+!-- SystemFNBuiltInFunctions = sys.fn_builtin_permissions
+HasPermsByName = Has_Perms_By_Name
+IsMember = IS_MEMBER
+IsSRVRoleMember = IS_SRVROLEMEMBER
+Permissions = PERMISSIONS
+SchemaId = SCHEMA_ID
+SchemaName = SCHEMA_NAME
+SetUser = SETUSER
+SUserId = SUSER_ID
+SUserSId = SUSER_SID
+SUserSName = SUSER_SNAME
+SUserName = SUSER_NAME
+UserId = USER_ID
+UserName = USER_NAME
+
+!-- TSQL String Functions
+!- Right and left functions
+!- defined under shared
+ASCII = ASCII
+Char = CHAR
+CharIndex = CHARINDEX
+Difference = DIFFERENCE
+Len = LEN
+Lower = LOWER
+Ltrim = LTRIM
+NChar = NCHAR
+PatIndex = PATINDEX
+QuoteName = QUOTENAME
+Replace = REPLACE
+Replicate = REPLICATE
+Reverse = REVERSE
+RTrim = RTRIM
+Soundex = SOUNDEX
+Space = SPACE
+Str = STR
+Stuff = STUFF
+SubString = SUBSTRING
+UniCode = UNICODE
+Upper = UPPER
+
+!
+!-- System Functions
+!-- Identity not included
+!- because it is a shared element
+!
+AppName = APP_NAME
+Case = CASE
+Cast = CAST
+Coalesce = COALESCE
+CollationProperty = COLLATIONPROPERTY
+ColumnsUpdated = COLUMNS_UPDATED
+CurrentTimestamp = CURRENT_TIMESTAMP
+DataLength = DATALENGTH
+ErrorLine = ERROR_LINE
+ErrorMessage = ERROR_MESSAGE
+ErrorNumber = ERROR_NUMBER
+ErrorProcedure = ERROR_PROCEDURE
+ErrorSeverity = ERROR_SEVERITY
+ScopeIdentity = SCOPE_IDENTITY
+ServerProperty = SERVERPROPERTY
+SessionProperty = SESSIONPROPERTY
+StatDate = STATS_DATE
+!--DMDBIndexPhysicalStats = sys.dm_db_index_physical_stats
+Update = UPDATE
+XActState = XACT_STATE
+ErrorState = ERROR_STATE
+HelpCollations = fn_helpcollations
+ServerSharedDrives = fn_servershareddrives
+VirtualFileStats = fn_virtualfilestats
+FormatMessage = FORMATMESSAGE
+RowCountBig = ROWCOUNT_BIG
+GetAnsiNull = GETANSINULL
+HostId = HOST_ID
+HostName = HOST_NAME
+IDentCurrent = IDENT_CURRENT
+IDentIncr = IDENT_INCR
+IDentSeed = IDENT_SEED
+IsDate = ISDATE
+IsNull = ISNULL
+IsNumeric = ISNUMERIC
+NewId = NEWID
+NullIf = NULLIF
+ParseName = PARSENAME
+OriginalLogin = ORIGINAL_LOGIN
+             
+
+!-- Text and Image Functions
+TextValid = TEXTVALID
+TextPtr = TEXTPTR
+
+!-- RowSetFunctions
+ContainsTable = CONTAINSTABLE
+OpenQuery = OPENQUERY
+OpenDataSource = OPENDATASOURCE
+FreeTextTable = FREETEXTTABLE
+OpenRowSet = OPENROWSET
+OpenXml = OPENXML
+
+!-- Ranking Functions
+Rank = RANK
+NTitle = NTILE
+DenseRank = DENSE_RANK
+RowNumber = ROW_NUMBER
+
+!-- Naked Intrinsics
+SystemUser = SYSTEM_USER
+SessionUser = SESSION_USER
+CurrentUser = CURRENT_USER
+
+!--- Terminals used to define TSQL intrinsics - @@Intrinsic
+
+!--- Configuration Intrinsics
+DateFirst = DATEFIRST
+DBTS = DBTS
+LangId = LANGID
+Language = LANGUAGE
+LockTimeOut = LOCK_TIMEOUT
+MaxConnections = MAX_CONNECTIONS
+MaxPrecision = MAX_PRECISION
+NestLevel = NESTLEVEL
+Options = OPTIONS
+RemServer = REMSERVER
+ServerName = SERVERNAME
+ServiceName = SERVICENAME
+SpId = SPID
+TextSize = TEXTSIZE
+Version = VERSION
+
+!-- Cursor intrinsics
+CusrsorRows = CURSOR_ROWS
+FetchStatus = FETCH_STATUS
+
+!-- Meta Data Intrinsics
+ProcId = PROCID
+
+!-- System Intrinsics
+TranCount = TRANCOUNT
+Error = ERROR
+RowCount = ROWCOUNT
+
+!-- System Statistics Intrinsics
+Connections = CONNECTIONS
+CpuBusy = CPU_BUSY
+Idle = IDLE
+IOBusy = IO_BUSY
+PacketErrors = PACKET_ERRORS
+PackReceived = PACK_RECEIVED
+PackSent = PACK_SENT
+TimeTicks = TIMETICKS
+TotalErrors = TOTAL_ERRORS
+TotalRead = TOTAL_READ
+TotalWrite = TOTAL_WRITE
+
+
+!- All DML And DDL
+<TSQL Parseable Sets> ::= <TSQL Statement List>
+                       | <TSQL DDL Statements>
+                       
+             
+!/
+!/ the following productions are verbose, ugly and confusing.
+!/ they are effectively restrictors that force
+!/ the grammar to parse in LALR(1) compliant fashion
+!/ (.e.g. no shift-reduce errors & no grammar ambiguity)
+!/
+<TSQL Statement> ::=  if  <Expression> <TSQL Statement>
+        |  if <Expression> <TSQL Restrict Stm> else <TSQL Statement>        
+        | <TSQL DML Statement>
+
+<TSQL Restrict Stm> ::= if <Expression> <TSQL Restrict Stm> else <TSQL Restrict Stm>
+          |  <TSQL DML Statement>
+
+<TSQL Terminated Statement> ::= <TSQL Statement> <TSQL Statement Terminator>
+                             | <TSQL Statement>
+                             
+                             
+<TSQL Statement List> ::= <TSQL Terminated Statement> ',' <TSQL Statement List>
+                      | <TSQL Terminated Statement>
+
+
+<TSQL Statement Block> ::= 'Begin' <TSQL Statement List> 'End'
+
+
+<TSQL DML Statement> ::= <TSQL Select Statement> 
+                    | <TSQL Create Table Statement>
+                    | <TSQL Variable Declaration Statement>
+                    | <TSQL SET Statement>
+                    | <TSQL Execute Statement>
+                    | <TSQL Insert Statement>
+                    | <TSQL Update Statement>
+                    | <TSQL With Statement> 
+
+
+<TSQL DDL Statements> ::= <TSQL Create Procedure Statement>
+
+
+!///////////////////////////////////////////////////////////////////////////////
+!/
+!/ Create Table
+!/
+!///////////////////////////////////////////////////////////////////////////////
+
+<TSQL Create Table Statement> ::= CREATE TABLE <TSQL 12 Part Name> '(' <TSQL Column List> ')' <TSQL Table Constraint Clause> 
+
+
+<TSQL Column List> ::= <TSQL Column Definition> ',' <TSQL Column List>
+                    | <TSQL Column Definition>
+
+<TSQL Column Definition> ::= <Single Part Identifier> <TSQL Data Type> <TSQL Column Auto Value> <TSQL Column RowGuid><TSQL Column Constraint Clause>
+                    
+<TSQL Column Auto Value> ::= DEFAULT <Expression>
+                    | IDENTITY '(' IntegerLiteral ',' IntegerLiteral ')'
+                    | 
+
+<TSQL Column RowGuid> ::= ROWGUIDCOL
+                    |
+
+<TSQL Table Constraint Clause>  ::= <TSQL Constraint Name> <TSQL Table Constraint Types>
+                    |
+
+<TSQL Table Constraint Types> ::= <TSQL Table Constraint Key List>
+                    | <TSQL Table Foreign Key Constraint>
+
+<TSQL Table Constraint Key List> ::= <TSQL Table Constraint Keys> '(' <Single Part Id List> ')'
+
+<TSQL Table Constraint Keys> ::=  PRIMARY KEY 
+                    | UNIQUE 
+
+<TSQL Table Foreign Key Constraint> ::= FOREIGN KEY '(' <Single Part Id List> ')' REFERENCES <TSQL 12 Part Name> '(' <Single Part Id List> ')' <TSQL Constraint Events> <TSQL Constraint Actions>
+
+<TSQL Column Constraint Clause> ::= <TSQL Constraint Name> <TSQL Column Constraint Types>
+                    | <TSQL Constraint Name> NULL <TSQL Column Constraint Types>
+                    | <TSQL Constraint Name> NOT NULL <TSQL Column Constraint Types>
+                    |
+
+<TSQL Column Constraint Types> ::= PRIMARY KEY 
+                    | UNIQUE 
+                    | <TSQL Column Foreign Key Constraint>
+
+<TSQL Column Foreign Key Constraint> ::= REFERENCES <TSQL 12 Part Name> '(' <Single Part Identifier> ')' <TSQL Constraint Events> <TSQL Constraint Actions>
+
+<TSQL Constraint Name> ::= CONSTRAINT 
+                    | CONSTRAINT <Single Part Identifier>
+                    |
+
+<TSQL Constraint Actions> ::= CASCADE
+                    | NOACTION
+                    | 
+
+<TSQL Constraint Events> ::= ON DELETE
+                    | ON UPDATE
+
+!CREATE TABLE table_name
+!   ( { < column_definition > | < table_constraint > } [ ,...n ]
+!   )
+!< column_definition > ::=
+!   { column_name data_type }
+!   [ { DEFAULT constant_expression
+!      | [ IDENTITY [ ( seed , increment ) ]
+!      ]
+!    } ]
+!   [ ROWGUIDCOL ]
+!   [ < column_constraint > [ ...n ] ]
+!< column_constraint > ::=
+!   [ CONSTRAINT constraint_name ]
+!   { [ NULL | NOT NULL ]
+!      | [ PRIMARY KEY | UNIQUE ]
+!      | REFERENCES ref_table [ ( ref_column ) ]
+!      [ ON DELETE { CASCADE | NO ACTION } ]
+!      [ ON UPDATE { CASCADE | NO ACTION } ]
+!   }
+!< table_constraint > ::=
+!   [ CONSTRAINT constraint_name ]
+!   { [ { PRIMARY KEY | UNIQUE }
+!      { ( column [ ,...n ] ) }
+!      ]
+!   | FOREIGN KEY
+!     ( column [ ,...n ] )
+!      REFERENCES ref_table [ ( ref_column [ ,...n ] ) ]
+!      [ ON DELETE { CASCADE | NO ACTION } ]
+!      [ ON UPDATE { CASCADE | NO ACTION } ]
+!   }
+
+
+!////////////////////////////////////////////////////////////////////////////////////
+!/
+!/ Create Procedure
+!/
+!////////////////////////////////////////////////////////////////////////////////////
+
+<TSQL Create Procedure Statement> ::= <TSQL Procedure Header><TSQL Parameter List> <TSQL Procedure Option List> <TSQL Procedure Replication> AS <TSQL Procedure Body>
+
+<TSQL Procedure Header> ::= CREATE <TSQL Procedure Element> <TSQL 12 Part Name> <TSQL Procedure Group Number>
+
+<TSQL Parameter List> ::= <TSQL Procedure Parameter> ',' <TSQL Parameter List>
+      | <TSQL Procedure Parameter>
+
+<TSQL Procedure Body> ::= <TSQL Statement Block>
+                       |  <TSQL Statement List>
+
+<TSQL Procedure Parameter> ::= <TSQL Parameter Identifier> <TSQL SchemaTypeName> <TSQL Data Type> <TSQL Paramater Size> <TSQL Parameter Vary> <TSQL Parameter Default> <TSQL Parameter Direction>
+
+<TSQL Paramater Size> ::= '(' IntegerLiteral ')'
+    |
+
+
+<TSQL Procedure Element> ::=   PROC 
+      | PROCEDURE 
+
+<TSQL Procedure Group Number> ::= ':' IntegerLiteral
+      |
+
+<TSQL Procedure Replication> ::= FOR REPLICATION
+      |
+
+<TSQL SchemaTypeName> ::= <Single Part Identifier> '.'
+      |
+
+<TSQL Parameter Vary> ::= VARYING
+      |
+
+<TSQL Parameter Default> ::= '=' <Expression>
+      |
+
+<TSQL Parameter Direction> ::= OUT
+      | OUTPUT
+      |
+
+<TSQL Procedure Option List> ::= WITH <TSQL Procedure Option> ',' <TSQL Procedure Option List>
+      | WITH <TSQL Procedure Option> 
+      |
+
+<TSQL Procedure Option> ::= ENCRYPTION
+      | RECOMPILE
+      | <TSQL Execute As Clause>
+
+<TSQL Execute As Clause> ::=  <TSQL Execute Clause Element> AS <TQL Execute As Identity>
+
+<TSQL Execute Clause Element> ::=  EXEC 
+      | EXECUTE
+
+<TQL Execute As Identity> ::= CALLER
+      | SELF
+      | OWNER
+      | StringLiteral
+
+!
+!CREATE { PROC | PROCEDURE } [schema_name.] procedure_name [ ; number ] 
+!    [ { @parameter [ type_schema_name. ] data_type } 
+!        [ VARYING ] [ = default ] [ [ OUT [ PUT ] 
+!    ] [ ,...n ] 
+![ WITH <procedure_option> [ ,...n ]
+![ FOR REPLICATION ] 
+!AS { <sql_statement> [;][ ...n ] | <method_specifier> }
+![;]
+!<procedure_option> ::= 
+!    [ ENCRYPTION ]
+!    [ RECOMPILE ]
+!    [ EXECUTE_AS_Clause ]
+!
+!<sql_statement> ::= 
+!{ [ BEGIN ] statements [ END ] }
+!
+!<method_specifier> ::=
+!EXTERNAL NAME assembly_name.class_name.method_name
+
+
+
+
+
+!/
+!/ Select Statement
+!/
+
+           
+<TSQL Select Statement> ::= <Query Expression> <Order Clause> <Query Option Clause> <Compute Clause Item List>
+            | <Query Expression> <Order Clause> <Query Option Clause> <TSQL Query For Clause>    
+
+<Query Expression> ::= <Query Specification>
+            | <Query Specification> <Query Union> <Query Expression>
+
+<Query Specification> ::= 'SELECT' <Restriction> <Row Limiter> <Select List> <Into Clause> <From Clause> <Where Clause> <Group Clause> <Having Clause>
+
+<Query Union> ::= UNION
+               | UNION ALL
+               | EXCEPT
+               | INTERSECT
+
+<TSQL Sub Query> ::= '(' <Query Specification> ')'
+
+<Query Option Clause> ::= OPTION '(' <Query Option List> ')'
+               |
+
+<Query Option List> ::=  <Query Option ListElement> ',' <Query Option List>
+               |  <Query Option ListElement>
+
+<Query Option ListElement> ::= <Query Option Join>
+               | <Query Option Union>
+               | <Query Option Group>
+               | <Query Option Fast>
+               | <Query Option ForceOrder>
+               | <Query Option MaxDrop>
+               | <Query Option Optimize For>
+               | <Query Option Parameterization>
+               | <Query Option Recompile>
+               | <Query Option RobustPlan>
+               | <Query Option KeepPlan>
+               | <Query Option KeepFixedPlan>
+               | <Query Option ExpandViews>
+               | <Query Option MaxRecursion>
+               | <Query Option UsePlan>
+
+<Query Option Join> ::= <Query Option JoinType> JOIN
+
+<Query Option Union> ::=<Query Option UnionType> UNION
+
+<Query Option Group> ::= <Query Option GroupType> GROUP
+
+<Query Option Fast> ::= FAST IntegerLiteral
+
+<Query Option ForceOrder> ::= FORCE ORDER
+
+<Query Option MaxDrop> ::= MAXDROP IntegerLiteral
+
+<Query Option Optimize For> ::= OPTIMIZE FOR '(' <Query Optimize Expression List> ')'
+
+<Query Option Parameterization> ::= PARAMETERIZATION <Query Option ParameterizationType>
+
+<Query Option Recompile> ::= RECOMPILE
+
+<Query Option RobustPlan> ::= ROBUST PLAN
+
+<Query Option KeepPlan> ::= KEEP PLAN
+
+<Query Option KeepFixedPlan> ::= KEEPFIXED PLAN
+
+<Query Option ExpandViews> ::= EXPAND VIEWS
+
+<Query Option MaxRecursion> ::= MAXRECURSION IntegerLiteral
+
+<Query Option UsePlan> ::= USE PLAN nCharLiteral
+
+<Query Option JoinType> ::= LOOP
+               | MERGE
+               | HASH
+
+<Query Option UnionType> ::= CONCAT
+               | HASH
+               | MERGE
+
+<Query Option GroupType> ::= HASH
+               | ORDER
+
+<Query Option ParameterizationType> ::= SIMPLE
+               | FORCED
+
+<Query Optimize Expression List> ::= <Query Optimize Expression> ',' <Query Optimize Expression List>
+               | <Query Optimize Expression>
+
+<Query Optimize Expression> ::= <TSQL Variable> '=' <TSQL Literal>
+
+
+!==================
+! Query For Clause
+! Directives
+! FOR XML AUTO 
+! FOR XML AUTO, TYPE, XMLSCHEMA, ELEMENTS XSINIL;
+! FOR XML RAW;
+! FOR XML RAW, ELEMENTS
+! FOR XML RAW, TYPE
+! FOR XML RAW, ELEMENTS XSINIL ;
+! FOR XML RAW, XMLDATA
+! FOR XML RAW, XMLSCHEMA
+! FOR XML RAW, XMLSCHEMA ('urn:example.com')
+! FOR XML RAW, BINARY BASE64 ;
+! FOR XML RAW ('ProductModel'), ELEMENTS
+! FOR XML RAW, ROOT('MyRoot')
+! FOR XML RAW ('ProductModelData')
+! FOR XML RAW ('ProductModelData'), root('MyRoot'), ELEMENTS XSINIL
+!==================
+
+
+<TSQL Query For Clause> ::= <TSQL Query For Clause Raw>
+                           | <TSQL Query For Clause Explicit> 
+                           | <TSQL Query For Clause Path Option> 
+
+<TSQL Query For Clause Raw> ::=  <TSQL Query For Clause Raw Option>
+                             | <TSQL Query For Clause Raw Option> <TSQL Query For Clause CommonDirectives> 
+                             | <TSQL Query For Clause Raw Option> <TSQL Query For Clause CommonDirectives> <TSQL Query For Clause Element>
+                             | <TSQL Query For Clause Raw Option> <TSQL Query For Clause CommonDirectives> <TSQL Query For Clause Query Type>
+                             | <TSQL Query For Clause Raw Option> <TSQL Query For Clause CommonDirectives> <TSQL Query For Clause Query Type> <TSQL Query For Clause Element> 
+
+<TSQL Query For Clause Raw Option> ::= FOR XML RAW 
+                             | FOR XML RAW '(' StringLiteral ')'
+                             | FOR XML AUTO
+
+
+<TSQL Query For Clause Explicit> ::= FOR XML EXPLICIT 
+                                  | FOR XML EXPLICIT <TSQL Query For Clause CommonDirectives>
+                                  | FOR XML EXPLICIT <TSQL Query For Clause CommonDirectives> ',' XMLDATA 
+  
+<TSQL Query For Clause Path Option> ::= <TSQL Query For Clause Path> 
+                                     | <TSQL Query For Clause Path> <TSQL Query For Clause CommonDirectives>
+                                     | <TSQL Query For Clause Path> <TSQL Query For Clause CommonDirectives> ',' <TSQL Query For Clause Element> 
+
+
+<TSQL Query For Clause Path> ::= FOR XML PATH 
+                              | FOR XML PATH StringLiteral 
+
+<TSQL Query For Clause CommonDirectives> ::= BINARY BASE64
+                    | TYPE
+                    | ROOT
+                    | ROOT '(' StringLiteral ')'
+                    
+<TSQL Query For Clause Element> ::= ELEMENTS
+                                 | ELEMENTS XSINIL
+                                 | ELEMENTS ABSENT
+    
+<TSQL Query For Clause Query Type> ::= XMLDATA 
+                                    | XMLSCHEMA 
+                                    | XMLSCHEMA '(' StringLiteral ')'                              
+
+!==============
+! Query Compute
+!==============
+
+<Compute Options> ::= AVG
+               | COUNT
+               | MAX
+               | MIN
+               | SUM
+
+<Compute Clause Item List> ::= <Compute Clause Item> <Compute Clause Item List>
+               | <Compute Clause Item>
+
+<Compute Clause Part List> ::= <Compute Clause Part> ',' <Compute Clause Part List>
+               | <Compute Clause Part>
+
+<Compute Clause Item> ::= COMPUTE <Compute Clause Part List> BY <Expr List>
+               |  COMPUTE <Compute Clause Part List>
+
+<Compute Clause Part> ::= <Compute Options> '(' <Expression> ')'
+
+!=================
+! Query Select Lists
+!=================
+
+<Select List> ::= <Select Item> ',' <Select List>
+                  | <Select Item>
+
+!=================
+! Query Lock Types
+!==================
+<LockTypes> ::= PagLock
+                  | NoLock
+                  | RowLock
+                  | TabLock
+                  | TabLockX
+                  | HoldLock
+                  | ReadComitted
+                  | ReapeatableRead
+                  | Serializeable
+
+<Lock Hint> ::=  'WITH (' <LockTypes> ')'   
+            |  '(' <LockTypes> ')'
+            |
+
+!====================
+! Select List Over Clause
+!====================
+
+<TSQL Select Item Over clause> ::= OVER '(' <TSQL Over PARTITION BY clause> ')'
+
+
+<TSQL Over PARTITION BY clause> ::= PARTITION BY <Select List>
+                                  | <TSQL Over Order By clause>
+                                  | PARTITION BY <Select List> <TSQL Over Order By clause> 
+
+!-- ROWS or RANGE requires that the ORDER BY specified  
+<TSQL Over Order By clause> ::= ORDER BY <Order List> 
+                              | ORDER BY <Order List> <TSQL Over clause row and range options>
+                              
+<TSQL Over clause row and range options> ::= <TSQL Over clause range windows>
+                                          | <TSQL Over clause row windows> 
+
+! RANGE cannot be used with RANGE<unsigned value specification> PRECEDING or <unsigned value specification> FOLLOWING.       
+! UNBOUNDED PRECEDING can only be specified as window starting point.                                   
+! UNBOUNDED FOLLOWING can only be specified as a window end point. 
+<TSQL Over clause range windows> ::= RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING  
+                                   | RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                                   | RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING 
+                                   | RANGE BETWEEN CURRENT ROW AND CURRENT ROW
+                                   
+<TSQL Over clause row windows> ::= ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING  
+                                   | ROWS BETWEEN UNBOUNDED PRECEDING AND IntegerLiteral PRECEDING
+                                   | ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                                   | ROWS BETWEEN IntegerLiteral PRECEDING AND UNBOUNDED FOLLOWING  
+                                   | ROWS BETWEEN IntegerLiteral PRECEDING AND IntegerLiteral FOLLOWING
+                                   | ROWS BETWEEN IntegerLiteral PRECEDING AND CURRENT ROW
+                                   | ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING 
+                                   | ROWS BETWEEN CURRENT ROW AND IntegerLiteral FOLLOWING
+                                   | ROWS BETWEEN CURRENT ROW AND CURRENT ROW
+                                   | ROWS BETWEEN IntegerLiteral FOLLOWING AND IntegerLiteral FOLLOWING
+
+   
+!=======================
+! Select Column Items
+!=======================
+
+<Select Item>   ::= '*'
+            | <Alias> '.*'
+            | <Expression> <Select Item Alias> 
+            | <TSQL Intrinsic Column> <Select Item Alias> 
+            | <Expression> <TSQL Select Item Over clause> <Select Item Alias> 
+            | <TSQL Intrinsic Column> <TSQL Select Item Over clause> <Select Item Alias> 
+
+
+<Select Item Alias> ::= StringLiteral
+            | <Alias>
+            | 'AS' <Alias>
+            | 'AS' StringLiteral
+            |
+
+<Restriction>   ::= ALL
+            | DISTINCT
+            |
+
+<Row Limiter>  ::=  TOP <Row Limiter Type> 
+                  | TOP <Row Limiter Type> WITH TIES
+                  | TOP <Row Limiter Type> PERCENT
+                  | TOP <Row Limiter Type> PERCENT WITH TIES
+                  |
+
+<Row Limiter Type> ::= IntegerLiteral 
+                  | '(' <TSQL Variable> ')'
+                  | '(' IntegerLiteral ')'
+
+<Aggregate>     ::= Count  '(' '*' ')'
+                  | Count  '(' <Expression> ')'
+                  | Avg    '(' <Expression> ')'
+                  | Min    '(' <Expression> ')'
+                  | Max    '(' <Expression> ')'
+                  | StDev  '(' <Expression> ')'
+                  | StDevP '(' <Expression> ')'
+                  | Sum    '(' <Expression> ')'
+                  | Var    '(' <Expression> ')'
+                  | VarP   '(' <Expression> ')'
+
+<Into Clause>   ::= INTO <TSQL 123 Part Name>
+                  | INTO PoundSign <TSQL 123 Part Name>
+                  |
+
+<From Clause>   ::= FROM <TSQL Table List> <Lock Hint> <Join Chain>
+               |
+
+<Join Dir>      ::= <JoinDirection>
+                  |
+
+<Join Chain>    ::= <Join> <Join Chain>
+                  |
+
+<Join>          ::= <Join Dir> JOIN <Id List> <Lock Hint> ON <Expression>
+                  | <Join Dir> JOIN <TSQL Sub Query> <Alias> ON <Expression>
+                  | CROSS JOIN <Id NameParts> <Alias>
+                  | CROSS JOIN <TSQL Sub Query> <Alias>
+
+<Where Clause>  ::= WHERE <Expression>
+                  |
+
+<Group Clause>  ::= <Group by>
+                  |
+
+<Order Clause>  ::= ORDER BY <Order List>
+                  |
+
+<Order List>    ::= <Id NameParts>  <Order Type> ',' <Order List>
+                  | <Id NameParts>  <Order Type>
+
+<Order Type>    ::= ASC
+                  | DESC
+                  |
+
+<Having Clause> ::= HAVING <Expression>
+        |
+        
+<JoinDirection> ::= Right
+                  | Left
+                  | Outer
+                  | Left Outer
+                  | Right Outer
+                  | Inner
+                  | Left Inner
+                  | Right Inner
+                  | Full Outer
+                  
+
+
+<TSQL Intrinsic Column> ::= DollarSign Identity
+                | DollarSign RowGuid
+                | Id '.' DollarSign RowGuid
+                | Id '.' DollarSign Identity
+
+<Group By> ::=  'GROUP' 'BY' <Id List> <Group By Options> 
+                | 'GROUP' 'BY' 'ALL' <Id List> <Group By Options>
+
+<Group By Options> ::= 'WITH ROLLUP'
+                  | 'WITH CUBE'
+                  |
+
+<TSQL Searched Case Expression> ::= CASE <TSQL Case When Expression List> End
+                  | CASE <TSQL Case When Expression List> ELSE <Expression> End
+
+<TSQL Simple Case Expression> ::= CASE <Expression> <TSQL Case When Expression List> End
+                  | CASE <Expression> <TSQL Case When Expression List> ELSE <Expression> End
+
+<TSQL Case When Expression> ::= WHEN <Expression> THEN <Expression> 
+
+<TSQL Case When Expression List> ::= <TSQL Case When Expression> <TSQL Case When Expression List>
+                  | <TSQL Case When Expression>
+
+!
+! EBNF for Select
+!
+!SELECT statement ::=  
+!    [WITH <common_table_expression> [,...n]]
+!    <query_expression> 
+!    [ ORDER BY { order_by_expression | column_position [ ASC | DESC ] } 
+!  [ ,...n ] ] 
+!    [ COMPUTE 
+!  { { AVG | COUNT | MAX | MIN | SUM } ( expression ) } [ ,...n ] 
+!  [ BY expression [ ,...n ] ] 
+!    ] 
+!    [ <FOR Clause>] 
+!    [ OPTION ( <query_hint> [ ,...n ] ) ] 
+!<query expression> ::= 
+!    { <query specification> | ( <query expression> ) } 
+!    [  { UNION [ ALL ] | EXCEPT | INTERSECT }
+!        <query specification> | ( <query expression> ) [...n ] ] 
+!<query specification> ::= 
+!SELECT [ ALL | DISTINCT ] 
+!    [TOP expression [PERCENT] [ WITH TIES ] ] 
+!    < select_list > 
+!    [ INTO new_table ] 
+!    [ FROM { <table_source> } [ ,...n ] ] 
+!    [ WHERE <search_condition> ] 
+!    [ GROUP BY [ ALL ] group_by_expression [ ,...n ] 
+!       [ WITH { CUBE | ROLLUP } ]
+!    ]
+!    [ HAVING < search_condition > ] 
+
+
+!- WITH statement 
+<TSQL CTE Column List> ::= <Single Part Identifier> ',' <TSQL CTE Column List> 
+                        | <Single Part Identifier>
+
+<TSQL CTE Wrapped Column List> ::= '(' <TSQL CTE Column List> ')'
+                                |
+
+<TSQL CTE Header> ::= <Single Part Identifier> <TSQL CTE Wrapped Column List> AS '(' <TSQL Select Statement> ')'
+
+<TSQL With Statement> ::=  'WITH' <TSQL CTE Header> <TSQL Select Statement>
+
+
+
+!////////////////////////////////////////////////////////////////////////////////
+!/
+!/ INSERT Statement - Data Manipulation
+!/
+!////////////////////////////////////////////////////////////////////////////////
+
+<TSQL Insert Statement> ::= <TSQL INSERT> <Id NameParts> <TSQL Insert Types>
+
+<TSQL INSERT> ::= INSERT <TSQL Insert Into> 
+
+<TSQL Insert Into> ::= INTO
+                |
+<TSQL Insert Types> ::= <TSQL Insert With Values>
+                | <TSQL Insert Column List> <TSQL Insert With Values>
+                | <TSQL Insert Column List> <TSQL Select Statement> 
+
+<TSQL Insert Column List> ::= '(' <Id List> ')' 
+
+<TSQL Insert With Values> ::= VALUES '(' <TSQL Insert Value List> ')'  
+
+<TSQL Insert Value List> ::= <TSQL Insert Value> ',' <TSQL Insert Value List>
+                | <TSQL Insert Value> 
+
+<TSQL Insert Value> ::= DEFAULT
+                | <Expression> 
+
+
+!
+! converted from this EBNF
+! INSERT [INTO] 
+!      table_name  [ ( column_list ) ] 
+!      { VALUES 
+!      ( { DEFAULT | NULL | expression } [ ,...n] ) 
+! | derived_table
+!       }
+!
+!
+
+
+!///////////////////////////////////////////////////////////////
+!/
+!/ UPDATE Statement - Data Manipulation
+!/
+!//////////////////////////////////////////////////////////////
+
+<TSQL Update Statement> ::= <TSQL Update Clause> <TSQL Update Set Clause> 
+
+<TSQL Update Clause> ::= UPDATE <TSQL Update Row Limiter> <TSQL Update Object> 
+
+<TSQL Update Row Limiter> ::= TOP <Expression>
+                    | TOP <Expression> PERCENT
+                    |
+
+<TSQL Update Object> ::= <TSQL Update Object Types>
+                    | <TSQL Update Object Types> 'WITH (' <TSQL Table Hint Limited> ')'
+
+
+<TSQL Update Object Types> ::= <Id NameParts>
+                    | <TSQL Rowset Function Limited>
+
+<TSQL Rowset Function Limited> ::= <TSQL OpenQuery Function>
+                            | <TSQL OpenRowset Function>
+
+<TSQL Table Hint Limited> ::= <TSQL Table Hint> ',' <TSQL Table Hint Limited>
+                    | <TSQL Table Hint>
+
+<TSQL Table Hint> ::= KEEPIDENTITY 
+  | KEEPDEFAULTS 
+  | FASTFIRSTROW 
+  | HOLDLOCK 
+  | IGNORE_CONSTRAINTS 
+  | IGNORE_TRIGGERS 
+  | NOWAIT
+  | PAGLOCK 
+  | ReadCommitted 
+  | READCOMMITTEDLOCK 
+  | READPAST 
+  | ROWLOCK 
+  | SERIALIZABLE 
+  | TABLOCK 
+  | TABLOCKX 
+  | UPDLOCK 
+  | XLOCK 
+
+
+<TSQL Update Set Clause> ::= 'SET' <TSQL Update Set List>
+
+
+<TSQL Update Set List> ::= <TSQL Update Set Item> ',' <TSQL Update Set List>
+                    | <TSQL Update Set Item>
+
+<TSQL Update Set Item> ::= <TSQL Simple Update>
+                    | <TSQL Partial Update>
+                    | <TSQL Variable Update>
+
+<TSQL Simple Update> ::= < TSQL 12 Part Name> '=' <Expression>
+
+<TSQL Partial Update> ::= <TSQL 12 Part Name> '.WRITE' '(' <Expression> ',' <TSQL Partial Length Specifier> ',' <TSQL Partial Length Specifier> ')'
+
+<TSQL Partial Length Specifier> ::= <TSQL Variable>
+                                | IntegerLiteral
+
+<TSQL Variable Update> ::= <TSQL Variable> '=' <Expression>
+
+
+!
+!
+! Ported from the following EBNF
+!
+![ WITH <common_table_expression> [...n] ]
+!UPDATE 
+!    [ TOP ( expression ) [ PERCENT ] ] 
+!    { <object> | rowset_function_limited 
+!     [ WITH ( <Table_Hint_Limited> [ ...n ] ) ]
+!    }
+!    SET 
+!        { column_name = { expression | DEFAULT | NULL }
+!          | { udt_column_name.{ { property_name = expression 
+!                                | field_name = expression } 
+!                               | method_name ( argument [ ,...n ] ) 
+!                              } 
+!            }
+!          | column_name { .WRITE ( expression , @Offset , @Length ) }
+!          | @variable = expression 
+!          | @variable = column = expression [ ,...n ] 
+!        } [ ,...n ] 
+!    [ <OUTPUT Clause> ]
+!    [ FROM{ <table_source> } [ ,...n ] ] 
+!    [ WHERE { <search_condition> 
+!            | { [ CURRENT OF 
+!                  { { [ GLOBAL ] cursor_name } 
+!                      | cursor_variable_name 
+!                  } 
+!                ]
+!              }
+!            } 
+!    ] 
+!    [ OPTION ( <query_hint> [ ,...n ] ) ]
+![ ; ]
+!
+!
+! (supporting ebnf, openrowset and query can be moved to there own area)
+!
+! <object> ::=
+!  { 
+!    [ server_name . database_name . schema_name . 
+!    | database_name .[ schema_name ] . 
+!    | schema_name .
+!    ]
+!        table_or_view_name}
+!
+!
+! <rowset_function_limited> ::= OPENQUERY
+!                 |  OPENROWSET
+!
+! <OPENQUERY> ::= ( linked_server ,'query' )
+!
+! <OUTPUT_CLAUSE> ::=
+!{
+!    [ OUTPUT <dml_select_list> INTO { @table_variable | output_table } [ ( column_list ) ] ]
+!    [ OUTPUT <dml_select_list> ]
+!}
+!
+!<dml_select_list> ::=
+!{ <column_name> | scalar_expression } [ [AS] column_alias_identifier ]
+!    [ ,...n ]
+!
+!<column_name> ::=
+!{ DELETED | INSERTED | from_table_name } . { * | column_name }
+!
+
+!//////////////////////////////////////////////////////////////////////////
+!/ 
+!/ OPENQUERY Function - data manipulation
+!/
+!/////////////////////////////////////////////////////////////////////////
+
+<TSQL OpenQuery Function> ::= OPENQUERY '(' <Single Part Identifier> StringLiteral ')'
+
+
+!///////////////////////////////////////////////////////////////////////////////
+!/
+!/ OPENRowset function - data manipulation
+!/
+!///////////////////////////////////////////////////////////////////////////////
+
+<TSQL OpenRowset Function> ::= OPENROWSET '(' <TSQL OpenRowset Source> ')'
+
+<TSQL OpenRowset Source> ::= <TSQL OpenRowset NonBulk>
+                        | <TSQL OpenRowset Bulk> 
+
+<TSQL OpenRowset NonBulk> ::= <TSQL OpenRowset Connection> ',' <TSQL OpenRowset SourceTypes>
+
+<TSQL OpenRowset Connection> ::= <TSQL OpenRowset Connection String>
+                        | <TSQL OpenRowset Connection String With Credentials>
+
+<TSQL OpenRowset Connection String> ::= StringLiteral ',' StringLiteral
+
+<TSQL OpenRowset Connection String With Credentials> ::= StringLiteral ',' StringLiteral semicolon StringLiteral semicolon StringLiteral  ',' 
+
+<TSQL OpenRowset SourceTypes> ::= <Id 3Part Member> 
+                    | <TSQL Select Statement>
+
+
+<TSQL OpenRowset Bulk> ::= BULK StringLiteral <TSQL OpenRowset Bulk Options>
+
+<TSQL OpenRowset Bulk Options> ::= FORMATFILE '=' StringLiteral <TSQL OpenRowset Bulk Option List>
+                                | SINGLE_BLOB 
+                                | SINGLE_CLOB
+                                | SINGLE_NCLOB
+
+<TSQL OpenRowset Bulk Option List> ::= <TSQL OpenRowset Bulk Option Item> ',' <TSQL OpenRowset Bulk Option List> 
+                                | <TSQL OpenRowset Bulk Option Item>
+
+
+<TSQL OpenRowset Bulk Option Item> ::=  <TSQL OpenRowset Code Page>
+                                | <TSQL Openrowset Error File>
+                                | <TSQL Openrowset First Row>
+                                | <TSQL Openrowset Last Row>
+                                | <TSQL Openrowset Max Errors> 
+                                | <TSQL Openrowset Rows Per Batch>
+
+<TSQL OpenRowset Code Page> ::= 'CODEPAGE' '=' <TSQL OpenRowset Bulk Options Code Page>
+
+<TSQL Openrowset Error File> ::= ERRORFILE '=' <Expression>
+
+<TSQL Openrowset First Row> ::= FIRSTROW '=' <Expression>
+
+<TSQL Openrowset Last Row> ::= LASTROW '=' <Expression>
+
+<TSQL Openrowset Max Errors> ::= MAXERRORS '=' <Expression>
+
+<TSQL Openrowset Rows Per Batch> ::= ROWS_PER_BATCH '=' <Expression>
+
+<TSQL OpenRowset Bulk Options Code Page> ::= 'ACP' 
+                                    | 'OEM' 
+                                    | 'RAW' 
+                                    | StringLiteral
+
+!
+!
+! <OPENROWSET> ::= 
+! ( { 
+!       'provider_name' , { 'datasource' ; 'user_id' ; 'password'  | 'provider_string' }
+!    
+!       , {   [ catalog. ] [ schema. ] object | 'query'} 
+!         
+!      
+!    | BULK 'data_file' , 
+!        { FORMATFILE = 'format_file_path' [ <bulk_options> ]
+!        | SINGLE_BLOB | SINGLE_CLOB | SINGLE_NCLOB }
+! } ) 
+!
+! <bulk_options> ::=
+!   [ , CODEPAGE = { 'ACP' | 'OEM' | 'RAW' | 'code_page' } ] 
+!   [ , ERRORFILE = 'file_name' ]
+!   [ , FIRSTROW = first_row ] 
+!   [ , LASTROW = last_row ] 
+!   [ , MAXERRORS = maximum_errors ] 
+!   [ , ROWS_PER_BATCH = rows_per_batch ] 
+!
+!
+
+
+!///////////////////////////////////////////////////////////////////////////
+!/
+!/ TSQL Delete statement
+!/
+!///////////////////////////////////////////////////////////////////////////
+![ WITH <common_table_expression> [ ,...n ] ]
+!DELETE 
+!    [ TOP ( expression ) [ PERCENT ] ] 
+!    [ FROM ] 
+!        { table_name [ WITH ( <table_hint_limited> [ ...n ] ) ]
+!        | view_name 
+!        | rowset_function_limited 
+!        | table_valued_function
+!   }
+!    [ <OUTPUT Clause> ]
+!    [ FROM <table_source> [ ,...n ] ] 
+!    [ WHERE { <search_condition> 
+!            | { [ CURRENT OF 
+!                   { { [ GLOBAL ] cursor_name } 
+!                       | cursor_variable_name 
+!                   } 
+!                ]
+!              }
+!            } 
+!    ] 
+!    [ OPTION ( <Query Hint> [ ,...n ] ) ] 
+![; ]
+
+
+
+
+
+
+!////////////////////////////////////////////////////////////////////////////
+!/
+!/ DECALRE Statement Variable Declaration
+!/
+!////////////////////////////////////////////////////////////////////////////
+
+<TSQL Variable Declaration Statement> ::= DECLARE <Variable Declaration List>
+
+<Variable Declaration Item> ::= <TSQL Variable> <TSQL Data Type> <TSQL Paramater Size>
+
+<Variable Declaration List> ::= <Variable Declaration Item> ',' <Variable Declaration List> 
+            | <Variable Declaration Item> 
+
+!//////////////////////////////////////////////////////////////////////////////////////
+!/
+!/ SET statement Variable Assignment
+!/
+!//////////////////////////////////////////////////////////////////////////////////////
+
+<TSQL SET Statement> ::= SET  <TSQL Variable> '=' <Expression>
+
+!//////////////////////////////////////////////////////////////////////////////////////
+!/
+!/ EXEC Statement - Execution control
+!/
+!/////////////////////////////////////////////////////////////////////////////////////
+
+<TSQL Execute Statement> ::=  <TSQL Execute Statements> <Exec Parameter Proc Name> <Exec Parameter List>
+
+<TSQL Execute Statements> ::= <TSQL Exec> 
+                            | <TSQL Execute>
+
+<TSQL Exec> ::= EXEC
+
+<TSQL Execute> ::= EXECUTE
+
+<Exec Parameter Proc Name> ::= <TSQL Variable> '=' <TSQL 12 Part Name>
+    | <TSQL 12 Part Name>
+
+<Exec Parameter List> ::= <Exec Parameter> ',' <Exec Parameter>
+                     | <Exec Parameter>
+                     | 
+
+<Exec Parameter> ::= <TSQL Variable> '=' <Exec Parameter Types> 
+
+<Exec Parameter Types> ::= <Exec Value Parameters>
+                     | <Exec Variable Parameter>
+                     | <Exec Default Parameter>
+
+
+<Exec Value Parameters> ::= StringLiteral 
+                     | IntegerLiteral
+                     | RealLiteral
+                     | nCharLiteral
+                     | HexLiteral
+
+<Exec Variable Parameter> ::=  <TSQL Variable> <Exec Output Parameter>
+
+<Exec Default Parameter> ::= DEFAULT
+
+<Exec Output Parameter> ::= OUTPUT
+                    |
+                                
+!
+! Converted form this EBNF
+!
+!Execute a stored procedure or function
+![ { EXEC | EXECUTE } ]
+!    { 
+!      [ @return_status = ]
+!      { module_name [ ;number ] | @module_name_var } 
+!        [ [ @parameter = ] { value 
+!                           | @variable [ OUTPUT ] 
+!                           | [ DEFAULT ] 
+!                           }
+!        ]
+!      [ ,...n ]
+!      [ WITH RECOMPILE ]
+!    }
+![;]
+!
+!Execute a character string
+!{ EXEC | EXECUTE } 
+!        ( { @string_variable | [ N ]'tsql_string' } [ + ...n ] )
+!    [ AS { LOGIN | USER } = ' name ' ]
+![;]
+!
+!Execute a pass-through command against a linked server
+!{ EXEC | EXECUTE }
+!        ( { @string_variable | [ N ] 'command_string' } [ + ...n ]
+!        [ {, { value | @variable [ OUTPUT ] } } [...n] ]
+!        ) 
+!    [ AS { LOGIN | USER } = ' name ' ]
+!    [ AT linked_server_name ]
+![;]
+!
+
+
+
+
+
+
+
+
+
+!//////////////////////////////////////////////////////////////////////////////////////
+!/
+!/ Generic language Elements
+!/
+!///////////////////////////////////////////////////////////////////////////////////////
+
+
+!====================
+! Expressions
+!====================
+<Expression>  ::= <And Exp> OR <Expression>
+                | <And Exp>
+
+<And Exp>     ::= <Not Exp> AND <And Exp>
+                | <Not Exp>
+
+<Not Exp>     ::= NOT <Pred Exp>
+                 | <Pred Exp>
+
+<Pred Exp>    ::= <Add Exp> BETWEEN <Add Exp> AND <Add Exp>
+                | <Add Exp> LIKE <Add Exp>
+                | <Add Exp> LIKE <Add Exp> ESCAPE nCharLiteral 
+                | <Add Exp> IS <Add Exp>
+                | <Add Exp> IS NOT <Add Exp>
+                | <Add Exp> IN   <Tuple>
+                | <Add Exp> '='  <Add Exp>
+                | <Add Exp> '<>' <Add Exp>
+                | <Add Exp> '!=' <Add Exp>
+                | <Add Exp> '>'  <Add Exp>
+                | <Add Exp> '>=' <Add Exp>
+                | <Add Exp> '<'  <Add Exp>
+                | <Add Exp> '<=' <Add Exp>
+                | <Add Exp>
+
+<Add Exp>     ::= <Add Exp> '+' <Mult Exp>
+                | <Add Exp> '-' <Mult Exp>
+                | <Mult Exp>
+
+<Mult Exp>    ::= <Mult Exp> '*' <Negate Exp>
+                | <Mult Exp> '/' <Negate Exp>
+                | <Negate Exp>
+
+<Negate Exp>  ::= '-' <Value>
+                | <Value>
+
+<Value>  ::= NULL
+          | <Id NameParts>
+          | <TSQL Literal>
+          | <Tuple>
+          | <TSQL Variable>
+          | <TSQL Declared Intrinsic>
+          | <TSQL Naked Intrinsic>
+          | <TSQL Function>
+          | <TSQL Searched Case Expression> 
+          | <TSQL Simple Case Expression> 
+          | <Aggregate>
+
+<Tuple> ::= <TSQL Sub Query>
+          | '(' <Expr List> ')'
+
+<Expr List> ::= <Expression> ',' <Expr List>
+          | <Expression>
+          
+!======================
+!-- Complex Identifiers
+!======================
+
+<Id List>     ::= <Id Member> ',' <Id List>
+                | <Id Member>
+
+<Single Part Id List> ::= <Single Part Identifier> ',' <Single Part Id List>
+                | <Single Part Identifier>
+
+<Id Member>   ::= <Id NameParts> <Alias>
+                | <Id NameParts>
+                | <Id NameParts> AS <Alias>
+
+<Id NameParts> ::= <Single Part Identifier>
+          | <MutliPart Identifier>
+
+<Alias> ::= <Single Part Identifier>
+
+
+!=====================================
+!- SinglePart/Multipart identifiers
+!=====================================
+
+<Single Part Identifier> ::= Id
+
+<MutliPart Identifier> ::= <Id 2Part Member>
+          | <Id 3Part Member>
+          | <Id 4Part Member>
+
+<TSQL 12 Part Name> ::= <Single Part Identifier>
+          | <Id 2Part Member>
+
+<TSQL 123 Part Name> ::= <Single Part Identifier>
+          | <Id 2Part Member>
+          | <Id 3Part Member>
+
+<Id 2Part Member> ::= Id '.' Id
+
+<Id 3Part Member> ::= <Id 3Part Short Member>
+          | <Id 3Part Std Member>
+
+<Id 4Part Member> ::= <Id 4Part Short Member>
+          | <Id 4Part Std Member>
+
+<Id 3Part Short Member> ::=  Id '..' Id
+
+<Id 3Part Std Member> ::= Id '.' Id '.' Id
+
+<Id 4Part Short Member> ::= Id '.' Id '..' Id
+
+<Id 4Part Std Member> ::= Id '.' Id '.' Id '.' Id
+
+
+!=================================
+! Variables and intrinsics
+!=================================
+<TSQL Temp Table Prefix> ::= PoundSign
+
+<TSQL Global Temp Prefix> ::= PoundSign PoundSign
+
+<Variable Prefix> ::= AtSign
+
+<TSQL Intrinsic Prefix> ::= AtSign AtSign
+
+<TSQL Variable> ::= <Variable Prefix> Id
+
+<TSQL Parameter Identifier> ::= <TSQL Variable>
+
+<TSQL Literal> ::= StringLiteral
+          | IntegerLiteral
+          | RealLiteral
+          | RealDecimal
+          | nCharLiteral
+          | HexLiteral
+
+<TSQL Statement Terminator> ::= SemiColon
+
+<TSQL Table List> ::= <TSQL Table Identifier> ',' <TSQL Table List>
+                | <TSQL Table Identifier>
+
+<TSQL Table Identifier> ::=   <TSQL Table Prefix> <Id NameParts> <TSQL Table Alias>
+                | <TSQL Variable> <TSQL Table Alias>
+
+<TSQL Table Alias> ::= <Alias>
+                | AS <Alias>
+                |
+
+<TSQL Table Prefix> ::= <TSQL Temp Table Prefix>
+                | <TSQL Global Temp Prefix>
+                | 
+
+!=================================
+! TSQL Data Types
+!=================================
+<TSQL_Type_BigInt> ::= BigInt
+
+<TSQL_Type_Binary> ::= Binary
+
+<TSQL_Type_Bit> ::= Bit
+
+<TSQL_Type_Char> ::= Char
+
+<TSQL_Type_DateTime> ::= Datetime
+
+<TSQL_Type_Date> ::= Date
+                  
+<TSQL_Type_Time> ::= Time
+
+<TSQL_Type_Decimal> ::= Decimal
+
+<TSQL_Type_Float> ::= Float
+
+<TSQL_Type_Image> ::= Image
+
+<TSQL_Type_int> ::= Int
+
+<TSQL_Type_Money> ::= Money
+
+<TSQL_Type_NChar> ::=   NChar
+
+<TSQL_Type_NText> ::= NText
+
+<TSQL_Type_Numeric> ::= Numeric
+
+<TSQL_Type_NVarChar> ::= NVarChar
+
+<TSQL_Type_Real> ::= Real
+
+<TSQL_Type_SmallDatetime> ::= SmallDateTime
+
+<TSQL_Type_SmallInt> ::= SmallInt
+
+<TSQL_Type_SmallyMoney> ::= SmallMoney
+
+<TSQL_Type_SqlVariant> ::= Sql_Variant
+
+<TSQL_Type_Text> ::= Text
+
+<TSQL_Type_TimeStamp> ::= TimeStamp
+
+<TSQL_Type_TinyInt> ::= TinyInt
+
+<TSQL_Type_UniqueIdentifier> ::= UniqueIdentifier
+
+<TSQL_Type_Varbinary> ::= VarBinary
+
+<TSQL_Type_VarChar> ::= VarChar
+
+<TSQL_Type_Xml> ::= Xml
+
+<TSQL Character Data Type> ::= <TSQL_Type_Char>
+          | <TSQL_Type_NChar>
+          | <TSQL_Type_NText>
+          | <TSQL_Type_NVarChar>
+          | <TSQL_Type_Text>
+          | <TSQL_Type_VarChar>
+
+<TSQL Numeric Data Type> ::= <TSQL_Type_BigInt>
+          | <TSQL_Type_Decimal>
+          | <TSQL_Type_Float>
+          | <TSQL_Type_int>
+          | <TSQL_Type_Numeric>
+          | <TSQL_Type_Real>
+          | <TSQL_Type_SmallInt>
+          | <TSQL_Type_TinyInt>
+          | <TSQL_Type_Money> 
+          | <TSQL_Type_SmallyMoney>
+
+<TSQL Binary Data Type> ::= <TSQL_Type_Binary>
+          | <TSQL_Type_Bit>
+          | <TSQL_Type_Image>
+          | <TSQL_Type_Varbinary>
+          | <TSQL_Type_TimeStamp>
+          | <TSQL_Type_SqlVariant>
+          | <TSQL_Type_Xml>
+          | <TSQL_Type_UniqueIdentifier>
+
+<TSQL DateTime Data Type> ::= <TSQL_Type_DateTime> 
+          | <TSQL_Type_SmallDatetime>
+          | <TSQL_Type_Date>
+          | <TSQL_Type_Time>
+
+<TSQL Data Type> ::= <TSQL Character Data Type>
+          | <TSQL Numeric Data Type>
+          | <TSQL Binary Data Type>
+          | <TSQL DateTime Data Type>
+
+
+<TSQL Function Parameter List> ::= <Expr List>
+          |
+
+<TSQL Declared Intrinsic> ::= <TSQL Intrinsic Prefix> <TSQL Intrinsic Configuration>
+          | <TSQL Intrinsic Prefix> <TSQL Intrinsic Cursor>
+          | <TSQL Intrinsic Prefix> <TSQL Intrinsic MetaData>
+          | <TSQL Intrinsic Prefix> <TSQL Intrinsic System>
+          | <TSQL Intrinsic Prefix> <TSQL Intrinsic System Stat>
+
+<TSQL Function> ::= <TSQL Cursor Functions>
+          | <TSQL User Defined function>
+          | <TSQL Date Functions> <TSQL Function Parameter List> ')'
+          | <TSQL Math functions> <TSQL Function Parameter List> ')'
+          | <TSQL Meta Data functions> <TSQL Function Parameter List> ')'
+          | <TSQL Security functions> <TSQL Function Parameter List> ')'
+          | <TSQL String functions> <TSQL Function Parameter List> ')'
+          | <TSQL System Functions> <TSQL Function Parameter List> ')'
+          | <TSQL Image Functions> <TSQL Function Parameter List> ')'
+          | <TSQL RowSet Functions> <TSQL Function Parameter List> ')'
+          | <TSQL Ranking Functions> <TSQL Function Parameter List> ')'
+          | Cast '(' <Expression> AS <TSQL Data Type> <Cast Length> ')' 
+          | <TSQL Convert Functions>
+
+<TSQL Convert Functions> ::= Convert '('  <TSQL Data Type> <Cast Length> ',' <Expression> AS <TSQL Data Type> <Convert Style> ')' 
+          | Convert '('  <TSQL Data Type>  <Cast Length> ',' <Expression> ')' 
+            | Convert '('  <TSQL Data Type>  <Cast Length> ',' <Expression> ',' IntegerLiteral ')' 
+
+
+<TSQL User Defined function> ::= Id '.' Id '('  <TSQL Function Parameter List>  ')'
+
+<Cast Length> ::= '(' IntegerLiteral ')'
+          |
+<Convert Style> ::= ',' IntegerLiteral
+          |
+<TSQL Naked Intrinsic> ::= SystemUser
+          | SessionUser
+          | CurrentUser
+
+<TSQL Intrinsic Configuration> ::= DateFirst
+          | DBTS
+          | LangId
+          | Language
+          | LockTimeOut
+          | MaxConnections
+          | MaxPrecision
+          | NestLevel
+          | Options
+          | RemServer
+          | ServerName
+          | ServiceName
+          | SpId
+          | TextSize
+          | Version
+
+<TSQL Intrinsic Cursor> ::= CusrsorRows
+          | FetchStatus
+
+<TSQL Intrinsic MetaData> ::= ProcId
+
+<TSQL Intrinsic System> ::= TranCount
+          | Identity
+          | Error
+          | RowCount
+
+<TSQL Intrinsic System Stat> ::= Connections
+          | CpuBusy
+          | Idle
+          | IOBusy
+          | PacketErrors
+          | PackReceived
+          | PackSent
+          | TimeTicks
+          | TotalErrors
+          | TotalRead
+          | TotalWrite
+
+<TSQL Cursor Functions> ::=  CursorStatus '('
+
+<TSQL Date Functions> ::= DateAdd '('
+          | DateDiff '(' 
+          | DateName '('
+          | DatePart '('
+          | Year '(' 
+          | Month '('
+          | Day '(' 
+          | GetDate '(' 
+          | GetUTCDate '('
+          | SysDateTime '(' 
+
+<TSQL Math functions> ::= Abs '('
+          | ACos '('
+          | ASin '('
+          | ATan '(' 
+          | Atn2 '('
+          | Ceiling '(' 
+          | Cos '('
+          | Cot '(' 
+          | Rand '('
+          | Sign '(' 
+          | Tan '(' 
+          | SQRT '(' 
+          | Degrees '(' 
+          | Exp '(' 
+          | Floor '(' 
+          | Log '(' 
+          | Log10 '(' 
+          | Pi '(' 
+          | Power '(' 
+          | Radians '(' 
+          | Round '('
+          | Sin '(' 
+          | Square '('
+
+<TSQL Meta Data functions> ::= ColLength '('
+          | ColName '('
+          | ColumnProperty '(' 
+          | DatabaseProperty '(' 
+          | DatabasePropertyEx '(' 
+          | DBId '('
+          | DBName '('
+          | FileId '('
+          | FileIdEx '(' 
+          | FileName '('
+          | FileGroupId '(' 
+          | FileGroupName '(' 
+          | FileGroupProperty '('
+          | FileProperty '(' 
+          | FNListExtendedProperty '(' 
+          | FullTextCatalogProperty '(' 
+          | FullTextServiceProperty '('
+          | IndexCol '('
+          | IndexKeyProperty '(' 
+          | IndexProperty '(' 
+          | ObjectId '('
+          | ObjectName '(' 
+          | ObjectProperty '(' 
+          | ObjectPropertyEx '(' 
+          | SqlVariantProperty '(' 
+          | TypeId '(' 
+          | TypeName '(' 
+          | TypeProperty '(' 
+
+<TSQL Security Functions> ::= SystemFNBuiltInFunctions '('
+          | HasPermsByName '(' 
+          | IsMember '(' 
+          | IsSRVRoleMember '(' 
+          | Permissions '('
+          | SchemaId '(' 
+          | SchemaName '(' 
+          | SetUser '(' 
+          | SUserId '(' 
+          | SUserSId '(' 
+          | SUserSName '(' 
+          | SUserName '(' 
+          | UserId '(' 
+          | UserName '(' 
+
+<TSQL String Functions> ::= ASCII '('
+          | Char '('
+          | CharIndex '(' 
+          | Difference '('
+          | Len '('
+          | Left '(' 
+          | Lower '(' 
+          | Ltrim '(' 
+          | NChar '('
+          | PatIndex '('
+          | QuoteName '('
+          | Replace '('
+          | Replicate '(' 
+          | Reverse '(' 
+          | RTrim '(' 
+          | Right '(' 
+          | Soundex '('
+          | Space '(' 
+          | Str '(' 
+          | Stuff '(' 
+          | SubString '(' 
+          | UniCode '(' 
+          | Upper '(' 
+
+<TSQL System Functions> ::= AppName '('
+          | Coalesce '(' 
+          | CollationProperty '('
+          | ColumnsUpdated '(' 
+          | CurrentTimestamp '('
+          | DataLength '(' 
+          | ErrorLine '(' 
+          | ErrorMessage '(' 
+          | ErrorNumber '(' 
+          | ErrorProcedure  '(' 
+          | ErrorSeverity '(' 
+          | ScopeIdentity '(' 
+          | ServerProperty '(' 
+          | SessionProperty '(' 
+          | StatDate '(' 
+          | DMDBIndexPhysicalStats '('
+          | Update '(' 
+          | XActState '(' 
+          | ErrorState '('
+          | HelpCollations '('
+          | ServerSharedDrives '('
+          | VirtualFileStats '(' 
+          | FormatMessage '(' 
+          | RowCountBig '('
+          | GetAnsiNull '(' 
+          | HostId '('
+          | HostName '('
+          | IDentCurrent '(' 
+          | IDentIncr '(' 
+          | IDentSeed '(' 
+          | Identity '(' 
+          | IsDate '(' 
+          | IsNull '(' 
+          | IsNumeric '('
+          | NewId '(' 
+          | NullIf '(' 
+          | ParseName '('
+          | OriginalLogin '(' 
+
+<TSQL Image Functions>  ::= TextValid '(' 
+          | TextPtr '(' 
+
+<TSQL RowSet Functions> ::= ContainsTable '(' 
+          | OpenQuery '(' 
+          | OpenDataSource '(' 
+          | FreeTextTable '(' 
+          | <TSQL OpenRowset Function>  
+          | OpenXml '(' 
+
+<TSQL Ranking Functions> ::= Rank '(' 
+          | NTitle '('
+          | DenseRank '(' 
+          | RowNumber '('
+
+
